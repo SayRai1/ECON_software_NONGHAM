@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formula Electric — Race Telemetry</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080b12;--s:rgba(255,255,255,0.025);--b:rgba(255,255,255,0.06);
+  --dim:rgba(255,255,255,0.3);--faint:rgba(255,255,255,0.18);
+  --cyan:#00e8ff;--grn:#00e5a0;--org:#ff8c00;--red:#ff3d3d;--pur:#a78bfa;
+  --m:'JetBrains Mono',monospace;--s2:'Inter',-apple-system,sans-serif;--d:'Orbitron',var(--m);
+}
+html,body{height:100%;width:100%;background:var(--bg);color:#fff;font-family:var(--s2);overflow:hidden}
+
+.shell{
+  height:100vh;width:100vw;
+  display:grid;
+  grid-template-rows:auto auto 1fr auto;
+  padding:clamp(6px,1vw,14px);
+  gap:clamp(4px,0.5vw,8px);
+  position:relative;
+}
+.shell::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,0.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.012) 1px,transparent 1px);
+  background-size:60px 60px;pointer-events:none;z-index:0;
+}
+.shell::after{
+  content:'';position:fixed;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent 10%,var(--red),var(--red),transparent 90%);
+  opacity:0.5;z-index:10;
+}
+
+/* Header */
+.hdr{display:flex;justify-content:space-between;align-items:center;padding-bottom:clamp(3px,0.4vw,6px);border-bottom:1px solid var(--b);position:relative;z-index:2}
+.br{display:flex;align-items:center;gap:clamp(5px,0.6vw,10px)}
+.br-logo{width:clamp(20px,1.8vw,30px);height:clamp(20px,1.8vw,30px);border-radius:4px;background:linear-gradient(135deg,var(--red),var(--org));display:flex;align-items:center;justify-content:center;font:800 clamp(7px,0.8vw,12px) var(--d);letter-spacing:-0.05em}
+.br-n{font:700 clamp(8px,0.8vw,12px) var(--d);letter-spacing:0.08em}
+.br-s{font-size:clamp(5px,0.45vw,8px);color:var(--dim);letter-spacing:0.15em}
+.hr{display:flex;align-items:center;gap:clamp(4px,0.6vw,10px)}
+.pb{display:flex;align-items:center;gap:3px;padding:2px 7px;border-radius:4px;background:rgba(255,61,61,0.08);border:1px solid rgba(255,61,61,0.18)}
+.pb .p{font:900 clamp(10px,1vw,15px) var(--d);color:var(--red)}
+.pb .t{font-size:clamp(5px,0.45vw,8px);color:var(--dim)}
+.ld{display:flex;align-items:center;gap:3px;padding:2px 6px;border-radius:10px;background:rgba(0,229,160,0.06);border:1px solid rgba(0,229,160,0.15)}
+.ld::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--grn);animation:pu 1.5s infinite}
+.ld span{font-size:clamp(6px,0.5vw,8px);color:var(--grn);font-weight:600}
+.ck{font:500 clamp(6px,0.6vw,10px) var(--m);color:var(--faint)}
+
+/* RPM */
+.rpm{background:var(--s);border:1px solid var(--b);border-radius:clamp(5px,0.5vw,8px);padding:clamp(4px,0.5vw,8px) clamp(6px,0.8vw,12px);position:relative;z-index:2}
+.rpm-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:clamp(2px,0.2vw,4px)}
+.rpm-v{font:700 clamp(10px,1vw,18px) var(--m);color:#fff}
+.rpm-x{font-size:clamp(5px,0.45vw,8px);color:var(--faint)}
+.rpm-b{display:flex;gap:1.5px;height:clamp(7px,0.7vw,12px)}
+.rpm-s{flex:1;border-radius:1.5px;background:rgba(255,255,255,0.03);transition:background 0.12s}
+
+/* Main grid — fixed proportions */
+.mn{
+  display:grid;
+  grid-template-columns:1fr 1.8fr 1fr;
+  gap:clamp(4px,0.6vw,10px);
+  position:relative;z-index:2;
+  min-height:0;
+}
+
+/* Side panels — grid rows stretch evenly */
+.pn{
+  display:grid;
+  grid-template-rows:auto auto auto 1fr 1fr;
+  gap:clamp(3px,0.4vw,6px);
+  min-height:0;
+}
+.pn-r{
+  display:grid;
+  grid-template-rows:auto auto auto auto 1fr;
+  gap:clamp(3px,0.4vw,6px);
+  min-height:0;
+}
+
+.cd{
+  background:var(--s);border:1px solid var(--b);
+  border-radius:clamp(5px,0.5vw,10px);
+  padding:clamp(5px,0.6vw,10px) clamp(6px,0.7vw,12px);
+  min-height:0;overflow:hidden;
+}
+.cl{font-size:clamp(5px,0.45vw,8px);color:var(--dim);letter-spacing:0.12em;font-weight:600;margin-bottom:clamp(2px,0.3vw,6px);text-transform:uppercase}
+
+/* Center */
+.cc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(2px,0.3vw,6px);min-height:0}
+.sr-w{position:relative;flex-shrink:0}
+.sr-w svg{display:block;width:clamp(200px,26vw,400px);height:clamp(200px,26vw,400px)}
+.sr-t{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:clamp(3px,0.4vw,8px)}
+.sr-n{font:900 clamp(40px,5vw,84px) var(--d);line-height:1;letter-spacing:-0.02em}
+.sr-u{font-size:clamp(8px,0.9vw,14px);color:var(--dim);font-weight:600;letter-spacing:0.25em;margin-top:1px}
+.gr{display:flex;gap:clamp(3px,0.35vw,6px)}
+.gb{width:clamp(20px,2vw,32px);height:clamp(20px,2vw,32px);border-radius:5px;display:flex;align-items:center;justify-content:center;font:700 clamp(7px,0.75vw,12px) var(--m);background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.2)}
+.gb.a{background:rgba(0,229,160,0.1);border-color:rgba(0,229,160,0.25);color:var(--grn)}
+.cb{display:flex;align-items:flex-start;gap:clamp(6px,1vw,18px)}
+
+/* Vbar */
+.vb{display:flex;flex-direction:column;align-items:center;gap:clamp(2px,0.25vw,4px);min-width:clamp(36px,3.5vw,56px)}
+.vb-l{font-size:clamp(5px,0.48vw,8px);color:var(--dim);font-weight:600;letter-spacing:0.1em;text-transform:uppercase}
+.vb-t{width:clamp(5px,0.5vw,9px);height:clamp(60px,7vw,120px);border-radius:4px;background:rgba(255,255,255,0.04);position:relative;overflow:hidden}
+.vb-f{position:absolute;bottom:0;left:0;right:0;border-radius:4px;transition:height 0.5s,background 0.5s}
+.vb-v{font:700 clamp(10px,1vw,18px) var(--m);line-height:1;transition:color 0.5s}
+.vb-u{font-size:clamp(5px,0.4vw,8px);color:var(--faint)}
+.car-svg{width:clamp(70px,9vw,150px)}
+
+/* Lap */
+.lt{font:700 clamp(12px,1.3vw,22px) var(--d);line-height:1;letter-spacing:0.02em}
+.lh{display:flex;justify-content:space-between;align-items:center;margin-bottom:clamp(1px,0.2vw,4px)}
+.ld2{font:600 clamp(5px,0.5vw,8px) var(--m);padding:1px 5px;border-radius:3px}
+.lm{display:flex;justify-content:space-between;font-size:clamp(5px,0.45vw,7px);color:var(--faint);margin-top:clamp(1px,0.15vw,3px)}
+
+/* Battery */
+.bt-r{display:flex;align-items:center;gap:clamp(4px,0.5vw,8px)}
+.bt-o{flex:1;height:clamp(8px,0.8vw,14px);border-radius:3px;background:rgba(255,255,255,0.04);position:relative;overflow:hidden}
+.bt-f{position:absolute;top:1px;bottom:1px;left:1px;border-radius:2px;transition:width 1s}
+.bt-sg{position:absolute;top:0;bottom:0;width:1px;background:rgba(0,0,0,0.3)}
+.bt-p{font:700 clamp(10px,1.1vw,18px) var(--d);line-height:1;min-width:clamp(26px,2.8vw,46px);text-align:right;transition:color 1s}
+.bt-ps{font-size:60%;color:var(--dim)}
+.bt-m{display:flex;justify-content:space-between;font-size:clamp(5px,0.4vw,7px);color:var(--faint);margin-top:1px}
+
+/* Modules */
+.mr{display:flex;align-items:center;gap:clamp(3px,0.35vw,6px);margin-bottom:clamp(1px,0.15vw,3px)}
+.ml{font:500 clamp(5px,0.45vw,8px) var(--m);color:var(--faint);width:clamp(12px,1.2vw,20px)}
+.mo{flex:1;height:clamp(3px,0.3vw,5px);border-radius:3px;background:rgba(255,255,255,0.03);overflow:hidden}
+.mf{height:100%;border-radius:3px;transition:width 0.6s,background 0.6s}
+.mv{font:600 clamp(6px,0.6vw,10px) var(--m);width:clamp(24px,2.5vw,40px);text-align:right;transition:color 0.6s}
+
+/* Spark */
+.sh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1px}
+.sv2{font:700 clamp(7px,0.7vw,12px) var(--m);line-height:1}
+.ss{display:block;width:100%;height:clamp(24px,2.5vw,45px)}
+.sf{display:flex;justify-content:space-between;font-size:clamp(4px,0.35vw,6px);color:var(--faint);margin-top:1px}
+
+/* Alerts — fill card */
+.al-wrap{display:flex;flex-direction:column;gap:clamp(1px,0.15vw,3px)}
+.al{display:flex;align-items:center;gap:clamp(3px,0.35vw,6px);padding:clamp(3px,0.35vw,6px) clamp(4px,0.5vw,8px);border-radius:0 4px 4px 0}
+.al-d{width:clamp(3px,0.28vw,5px);height:clamp(3px,0.28vw,5px);border-radius:50%;flex-shrink:0}
+.al-m{font-size:clamp(5px,0.5vw,9px);font-weight:500;flex:1}
+.al-t{font:500 clamp(4px,0.4vw,7px) var(--m);color:var(--faint);flex-shrink:0}
+
+/* Stats */
+.st-r{display:grid;grid-template-columns:repeat(6,1fr);gap:clamp(3px,0.35vw,6px);position:relative;z-index:2}
+.st-c{background:var(--s);border:1px solid var(--b);border-radius:clamp(4px,0.4vw,8px);padding:clamp(3px,0.35vw,6px) clamp(4px,0.4vw,8px);text-align:center}
+.st-l{font-size:clamp(4px,0.35vw,6px);color:var(--dim);font-weight:600;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:1px}
+.st-v{font:700 clamp(9px,0.9vw,16px) var(--m);line-height:1}
+.st-u{font-size:clamp(4px,0.35vw,6px);color:var(--faint);margin-top:1px}
+
+/* G-force */
+.gf-w{display:flex;align-items:center;justify-content:center;height:100%;min-height:0}
+.gf-w svg{width:100%;height:100%;max-width:clamp(60px,6vw,120px);max-height:clamp(60px,6vw,120px)}
+
+/* Footer */
+.ft{display:flex;justify-content:space-between;padding-top:clamp(2px,0.25vw,5px);border-top:1px solid var(--b);font-size:clamp(4px,0.4vw,7px);color:var(--faint);position:relative;z-index:2}
+
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="hdr">
+    <div class="br"><div class="br-logo">FE</div><div><div class="br-n">Race Telemetry</div><div class="br-s">Formula Electric · Car #42</div></div></div>
+    <div class="hr">
+      <div class="pb"><span class="p">P3</span><span class="t">/ 22</span></div>
+      <div class="ld"><span>LIVE</span></div>
+      <span class="ck" id="ck">--:--:--</span>
+    </div>
+  </header>
+
+  <div class="rpm">
+    <div class="rpm-h"><span class="cl" style="margin-bottom:0">RPM</span><div><span class="rpm-v" id="rv">0</span><span class="rpm-x"> / 12k</span></div></div>
+    <div class="rpm-b" id="rb"></div>
+  </div>
+
+  <div class="mn">
+    <!-- LEFT -->
+    <div class="pn">
+      <div class="cd">
+        <div class="lh"><span class="cl" style="margin-bottom:0" id="ll">Lap 7</span><span class="ld2" id="ld">+0.000s</span></div>
+        <div class="lt" id="ltv">0:00.000</div>
+        <div class="lm"><span>Best: <span style="color:var(--grn);font-family:var(--m)" id="bl">0:00.000</span></span><span>S1: 28.4 · S2: 31.2</span></div>
+      </div>
+      <div class="cd">
+        <div class="cl">Battery</div>
+        <div class="bt-r">
+          <div class="bt-o"><div class="bt-f" id="bf"></div><div class="bt-sg" style="left:25%"></div><div class="bt-sg" style="left:50%"></div><div class="bt-sg" style="left:75%"></div></div>
+          <div class="bt-p" id="bp">82<span class="bt-ps">%</span></div>
+        </div>
+        <div class="bt-m"><span id="brn">Est. 38 km</span><span id="bvt">356V · 142A</span></div>
+      </div>
+      <div class="cd">
+        <div class="sh"><span class="cl" style="margin-bottom:0">Energy</span><span class="sv2" style="color:var(--pur)" id="ev">0.0</span></div>
+        <svg class="ss" id="es" preserveAspectRatio="none"></svg>
+        <div class="sf"><span>−12s</span><span>kW·h</span></div>
+      </div>
+      <!-- Tire Pressures - NEW -->
+      <div class="cd">
+        <div class="cl">Tire Pressure</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(2px,0.3vw,5px)">
+          <div class="tp-cell" id="tp0"></div>
+          <div class="tp-cell" id="tp1"></div>
+          <div class="tp-cell" id="tp2"></div>
+          <div class="tp-cell" id="tp3"></div>
+        </div>
+      </div>
+      <!-- Alerts -->
+      <div class="cd" style="display:flex;flex-direction:column;min-height:0">
+        <div class="cl">System Alerts</div>
+        <div class="al-wrap" id="aw"></div>
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="cc">
+      <div class="sr-w">
+        <svg id="ss2" viewBox="0 0 220 220"></svg>
+        <div class="sr-t"><span class="sr-n" id="sn">0</span><span class="sr-u">km/h</span></div>
+      </div>
+      <div class="gr" id="grd"></div>
+      <div class="cb">
+        <div class="vb" id="vm"></div>
+        <svg class="car-svg" id="cs" viewBox="0 0 120 220"></svg>
+        <div class="vb" id="vp"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="pn-r">
+      <div class="cd">
+        <div class="cl">STM32 Modules</div>
+        <div id="mt"></div>
+      </div>
+      <div class="cd">
+        <div class="sh"><span class="cl" style="margin-bottom:0">Power Output</span><span class="sv2" style="color:var(--cyan)" id="pv">0.0</span></div>
+        <svg class="ss" id="ps" preserveAspectRatio="none"></svg>
+        <div class="sf"><span>−12s</span><span>kW</span></div>
+      </div>
+      <div class="cd">
+        <div class="sh"><span class="cl" style="margin-bottom:0">Torque</span><span class="sv2" style="color:var(--org)" id="tv">0</span></div>
+        <svg class="ss" id="ts" preserveAspectRatio="none"></svg>
+        <div class="sf"><span>−12s</span><span>N·m</span></div>
+      </div>
+      <div class="cd">
+        <div class="sh"><span class="cl" style="margin-bottom:0">Coolant Flow</span><span class="sv2" style="color:var(--grn)" id="cfv">0.0</span></div>
+        <svg class="ss" id="cfs" preserveAspectRatio="none"></svg>
+        <div class="sf"><span>−12s</span><span>L/min</span></div>
+      </div>
+      <div class="cd" style="display:flex;flex-direction:column;min-height:0">
+        <div class="cl">G-Force</div>
+        <div class="gf-w"><svg id="gfs" viewBox="0 0 100 100"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="st-r" id="sr"></div>
+
+  <footer class="ft">
+    <span>Formula Electric Telemetry v2.2 — Live Prototype (Simulated Data)</span>
+    <span style="font-family:var(--m)">4× STM32 · CAN Bus Active</span>
+  </footer>
+</div>
+
+<style>
+.tp-cell{
+  background:rgba(255,255,255,0.03);border:1px solid var(--b);border-radius:clamp(4px,0.35vw,6px);
+  padding:clamp(3px,0.3vw,6px) clamp(4px,0.4vw,8px);
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+}
+.tp-lbl{font-size:clamp(4px,0.35vw,6px);color:var(--faint);text-transform:uppercase;letter-spacing:0.1em;font-weight:600}
+.tp-val{font:700 clamp(8px,0.8vw,14px) var(--m);line-height:1}
+.tp-bar{width:100%;height:clamp(2px,0.2vw,3px);border-radius:2px;background:rgba(255,255,255,0.04);overflow:hidden;margin-top:1px}
+.tp-bf{height:100%;border-radius:2px;transition:width 0.6s,background 0.6s}
+</style>
+
+<script>
+const lerp=(a,b,t)=>a+(b-a)*t,cl2=(v,l,h)=>Math.min(Math.max(v,l),h);
+const arc=(cx,cy,r,s,e)=>{const R=a=>((a-90)*Math.PI)/180;return`M ${cx+r*Math.cos(R(s))} ${cy+r*Math.sin(R(s))} A ${r} ${r} 0 ${e-s>180?1:0} 1 ${cx+r*Math.cos(R(e))} ${cy+r*Math.sin(R(e))}`};
+const hc=(t,mx=75)=>`hsl(${lerp(185,0,cl2(t/mx,0,1))},80%,55%)`;
+const fl=s=>`${Math.floor(s/60)}:${(s%60).toFixed(3).padStart(6,'0')}`;
+const NS='http://www.w3.org/2000/svg';
+const se=(tag,a)=>{const e=document.createElementNS(NS,tag);for(const[k,v]of Object.entries(a))e.setAttribute(k,v);return e};
+
+const S={speed:0,rpm:0,mT:0,mTs:[0,0,0,0],bat:82,volt:356,cur:142,ene:0,pow:0,tor:0,cool:0,
+  pH:Array(30).fill(0),eH:Array(30).fill(0),tH:Array(30).fill(0),cH:Array(30).fill(0),
+  lT:92.456,bL:91.203,cL:7,gx:0,gy:0,tP:[1.82,1.85,1.80,1.83]};
+const T={speed:145,rpm:8200,mT:72,mTs:[48,55,51,46],ene:22.5,pow:28,tor:185,cool:8.5};
+const alerts=[
+  {type:'ok',msg:'Powertrain nominal',time:'00:12'},
+  {type:'warning',msg:'M2 temp approaching threshold',time:'01:34'},
+  {type:'info',msg:'Regen braking @ 85 kW',time:'02:10'},
+  {type:'info',msg:'DRS zone available',time:'03:45'},
+  {type:'ok',msg:'Tire pressure nominal',time:'05:22'},
+];
+const stD=[
+  {l:'Voltage',id:'xv',u:'V',c:'var(--cyan)'},{l:'Current',id:'xc',u:'A',c:'var(--cyan)'},
+  {l:'Torque',id:'xq',u:'N·m',c:'var(--org)'},{l:'Throttle',id:'xt',u:'%',c:'var(--grn)'},
+  {l:'Brake',id:'xb',u:'bar',c:'var(--red)'},{l:'Tire Avg',id:'xa',u:'°C',c:'var(--pur)'},
+];
+const ac={critical:'#ff3d3d',warning:'#ff8c00',info:'#00e8ff',ok:'#00e5a0'};
+
+function init(){
+  // RPM
+  const rb=document.getElementById('rb');for(let i=0;i<40;i++){const d=document.createElement('div');d.className='rpm-s';rb.appendChild(d)}
+  // Gears
+  const g=document.getElementById('grd');['P','R','N','D'].forEach(x=>{const d=document.createElement('div');d.className='gb'+(x==='D'?' a':'');d.textContent=x;g.appendChild(d)});
+  // Speed
+  const sv=document.getElementById('ss2'),sA=-225,eA=45,cx=110,cy=110;
+  sv.appendChild(se('path',{d:arc(cx,cy,96,sA,eA),fill:'none',stroke:'rgba(255,255,255,0.05)','stroke-width':'6','stroke-linecap':'round'}));
+  sv.appendChild(se('path',{d:arc(cx,cy,104,sA,eA),fill:'none',stroke:'rgba(255,255,255,0.03)','stroke-width':'1'}));
+  for(let i=0;i<=8;i++){const a=sA+(eA-sA)*(i/8),r=((a-90)*Math.PI)/180;
+    sv.appendChild(se('line',{x1:cx+78*Math.cos(r),y1:cy+78*Math.sin(r),x2:cx+88*Math.cos(r),y2:cy+88*Math.sin(r),stroke:'rgba(255,255,255,0.12)','stroke-width':'1.5'}));
+    const t=se('text',{x:cx+66*Math.cos(r),y:cy+66*Math.sin(r),'text-anchor':'middle','dominant-baseline':'middle','font-size':'8',fill:'rgba(255,255,255,0.2)','font-family':"'JetBrains Mono',monospace"});
+    t.textContent=Math.round(240*i/8);sv.appendChild(t)}
+  sv.appendChild(se('path',{id:'sa',d:arc(cx,cy,96,sA,sA),fill:'none','stroke-width':'6','stroke-linecap':'round',stroke:'var(--cyan)'}));
+  // Car
+  buildCar();
+  // Vbars
+  bVB('vm','Motor','°C');bVB('vp','Power','kW');
+  // Modules
+  const mw=document.getElementById('mt');for(let i=0;i<4;i++){const r=document.createElement('div');r.className='mr';r.innerHTML=`<span class="ml">M${i+1}</span><div class="mo"><div class="mf" id="mf${i}"></div></div><span class="mv" id="mv${i}">0.0°</span>`;mw.appendChild(r)}
+  // Tire pressure cells
+  ['FL','FR','RL','RR'].forEach((l,i)=>{
+    document.getElementById(`tp${i}`).innerHTML=`<span class="tp-lbl">${l}</span><span class="tp-val" id="tpv${i}" style="color:var(--grn)">0.00</span><div class="tp-bar"><div class="tp-bf" id="tpf${i}"></div></div>`;
+  });
+  // Alerts
+  const aw=document.getElementById('aw');
+  alerts.forEach(a=>{const c=ac[a.type];const d=document.createElement('div');d.className='al';d.style.background=c+'08';d.style.borderLeft=`2px solid ${c}`;d.innerHTML=`<div class="al-d" style="background:${c};box-shadow:0 0 6px ${c}"></div><span class="al-m" style="color:${c}dd">${a.msg}</span><span class="al-t">${a.time}</span>`;aw.appendChild(d)});
+  // Stats
+  const sr=document.getElementById('sr');stD.forEach(s=>{const d=document.createElement('div');d.className='st-c';d.innerHTML=`<div class="st-l">${s.l}</div><div class="st-v" id="${s.id}" style="color:${s.c}">0</div><div class="st-u">${s.u}</div>`;sr.appendChild(d)});
+  // G-force
+  document.getElementById('gfs').innerHTML=`<circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/><circle cx="50" cy="50" r="28" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.5" stroke-dasharray="2 2"/><circle cx="50" cy="50" r="14" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="0.5" stroke-dasharray="2 2"/><line x1="50" y1="8" x2="50" y2="92" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/><line x1="8" y1="50" x2="92" y2="50" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/><circle id="gd" cx="50" cy="50" r="4" fill="var(--cyan)"/><text x="50" y="6" text-anchor="middle" font-size="5" fill="rgba(255,255,255,0.2)">Accel</text><text x="50" y="98" text-anchor="middle" font-size="5" fill="rgba(255,255,255,0.2)">Brake</text><text x="5" y="52" font-size="5" fill="rgba(255,255,255,0.2)">L</text><text x="95" y="52" text-anchor="end" font-size="5" fill="rgba(255,255,255,0.2)">R</text>`;
+  // Sparks
+  iSp('es','#a78bfa');iSp('ps','#00e8ff');iSp('ts','#ff8c00');iSp('cfs','#00e5a0');
+}
+
+function bVB(id,l,u){document.getElementById(id).innerHTML=`<span class="vb-l">${l}</span><div class="vb-t"><div class="vb-f" id="${id}f"></div></div><span class="vb-v" id="${id}v">0</span><span class="vb-u">${u}</span>`}
+
+function buildCar(){
+  document.getElementById('cs').innerHTML=`
+    <path d="M60 8 C38 8 30 30 28 50 L26 90 C24 100 22 110 22 130 L22 170 C22 190 35 208 60 210 C85 208 98 190 98 170 L98 130 C98 110 96 100 94 90 L92 50 C90 30 82 8 60 8Z" fill="rgba(255,255,255,0.025)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <rect x="12" y="12" width="96" height="5" rx="2" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="0.6"/>
+    <rect x="16" y="200" width="88" height="7" rx="2" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="0.6"/>
+    <rect x="10" y="38" width="13" height="30" rx="4" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="0.6"/>
+    <rect x="97" y="38" width="13" height="30" rx="4" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="0.6"/>
+    <rect x="8" y="155" width="15" height="34" rx="5" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="0.6"/>
+    <rect x="97" y="155" width="15" height="34" rx="5" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="0.6"/>
+    <ellipse cx="60" cy="95" rx="13" ry="17" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="0.6"/>
+    ${[{x:34,y:40,w:22,h:26,i:0},{x:64,y:40,w:22,h:26,i:1},{x:34,y:130,w:22,h:26,i:2},{x:64,y:130,w:22,h:26,i:3}].map(z=>`
+      <rect id="cz${z.i}" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="4" fill="rgba(0,232,255,0.08)" stroke="#00e8ff" stroke-width="0.8"/>
+      <text id="ct${z.i}" x="${z.x+z.w/2}" y="${z.y+z.h/2-3}" text-anchor="middle" font-size="7.5" font-weight="700" fill="#00e8ff" font-family="'JetBrains Mono',monospace">0°</text>
+      <text x="${z.x+z.w/2}" y="${z.y+z.h/2+8}" text-anchor="middle" font-size="5" font-weight="500" fill="rgba(255,255,255,0.3)">M${z.i+1}</text>
+    `).join('')}`;
+}
+
+function iSp(id,color){
+  const s=document.getElementById(id),w=300,h=55;s.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  const d=se('defs',{}),gid=id+'g',g=se('linearGradient',{id:gid,x1:'0',y1:'0',x2:'0',y2:'1'});
+  g.appendChild(se('stop',{offset:'0%','stop-color':color,'stop-opacity':'0.25'}));
+  g.appendChild(se('stop',{offset:'100%','stop-color':color,'stop-opacity':'0'}));
+  d.appendChild(g);s.appendChild(d);
+  s.appendChild(se('line',{x1:0,y1:h/2,x2:w,y2:h/2,stroke:'rgba(255,255,255,0.05)','stroke-width':'0.5','stroke-dasharray':'4 3'}));
+  s.appendChild(se('path',{id:id+'a',fill:`url(#${gid})`,d:''}));
+  s.appendChild(se('path',{id:id+'l',fill:'none',stroke:color,'stroke-width':'1.8','stroke-linecap':'round','stroke-linejoin':'round'}));
+  const dot=se('circle',{id:id+'d',r:'3',fill:color,cx:0,cy:0});dot.style.filter=`drop-shadow(0 0 4px ${color})`;s.appendChild(dot);
+}
+
+function tick(){
+  const t=T,s=S,ph=Date.now()/4000,ac2=Math.sin(ph)*0.5+0.5;
+  t.speed=cl2(80+ac2*160+(Math.random()-0.5)*15,0,240);t.rpm=cl2(t.speed*48+(Math.random()-0.5)*500,0,12000);
+  t.mT=cl2(t.mT+(Math.random()-0.42)*1.5,40,105);t.mTs=t.mTs.map(v=>cl2(v+(Math.random()-0.42)*1.2,30,72));
+  t.ene=cl2(t.ene+(Math.random()-0.5)*1,0.5,35);t.pow=cl2(t.pow+(Math.random()-0.5)*3,1,45);
+  t.tor=cl2(t.speed*0.9+(Math.random()-0.5)*30,40,280);t.cool=cl2(t.cool+(Math.random()-0.5)*0.5,4,14);
+  s.speed=lerp(s.speed,t.speed,0.08);s.rpm=lerp(s.rpm,t.rpm,0.1);s.mT=lerp(s.mT,t.mT,0.06);
+  s.mTs=s.mTs.map((v,i)=>lerp(v,t.mTs[i],0.06));s.ene=lerp(s.ene,t.ene,0.15);s.pow=lerp(s.pow,t.pow,0.2);
+  s.tor=lerp(s.tor,t.tor,0.12);s.cool=lerp(s.cool,t.cool,0.1);
+  const regen=s.speed<60?-(Math.random()*15+5):s.pow;
+  s.pH=[...s.pH.slice(1),regen];s.eH=[...s.eH.slice(1),s.ene];s.tH=[...s.tH.slice(1),s.tor];s.cH=[...s.cH.slice(1),s.cool];
+  s.lT+=0.4*(0.97+Math.random()*0.06);s.gx=lerp(s.gx,(Math.random()-0.5)*2.5,0.1);s.gy=lerp(s.gy,(ac2-0.5)*3,0.08);
+  s.volt=cl2(340+s.speed*0.12+(Math.random()-0.5)*8,320,400);s.cur=cl2(s.pow*4.2+(Math.random()-0.5)*20,10,300);
+  s.tP=s.tP.map(v=>cl2(v+(Math.random()-0.5)*0.02,1.6,2.2));
+
+  document.getElementById('ck').textContent=new Date().toLocaleTimeString('en-GB');
+  // RPM
+  document.getElementById('rv').textContent=Math.round(s.rpm);
+  const rp=cl2(s.rpm/12000,0,1),ra=Math.round(40*rp);
+  document.querySelectorAll('.rpm-s').forEach((el,i)=>{const sp=i/40;const c=sp>0.85?'#ff3d3d':sp>0.7?'#ff8c00':'#00e8ff';el.style.background=i<ra?c:'rgba(255,255,255,0.03)';el.style.boxShadow=i<ra?`0 0 4px ${c}40`:'none'});
+  // Speed
+  const sA=-225,eA=45,spct=cl2(s.speed/240,0,1),sw=(eA-sA)*spct;
+  const sc=s.speed>180?'#ff3d3d':s.speed>120?'#ff8c00':'#00e8ff';
+  const sa=document.getElementById('sa');sa.setAttribute('d',arc(110,110,96,sA,sA+sw));sa.setAttribute('stroke',sc);sa.style.filter=`drop-shadow(0 0 10px ${sc}60)`;
+  document.getElementById('sn').textContent=Math.round(s.speed);
+  // Lap
+  const lm=s.lT%120;document.getElementById('ltv').textContent=fl(lm);document.getElementById('ll').textContent=`Lap ${s.cL}`;document.getElementById('bl').textContent=fl(s.bL);
+  const dt=lm-s.bL,de=document.getElementById('ld'),dc=dt<=0?'#00e5a0':'#ff3d3d';
+  de.textContent=`${dt<=0?'':'+'}${dt.toFixed(3)}s`;de.style.color=dc;de.style.background=dc+'15';de.style.border=`1px solid ${dc}25`;
+  // Battery
+  const bc=s.bat>50?'#00e5a0':s.bat>20?'#ff8c00':'#ff3d3d';
+  const bf=document.getElementById('bf');bf.style.width=s.bat+'%';bf.style.background=`linear-gradient(90deg,${bc}90,${bc})`;bf.style.boxShadow=`0 0 12px ${bc}30`;
+  document.getElementById('bp').innerHTML=`${s.bat}<span class="bt-ps">%</span>`;document.getElementById('bp').style.color=bc;
+  document.getElementById('brn').textContent=`Est. ${Math.round(s.bat*0.46)} km`;document.getElementById('bvt').textContent=`${Math.round(s.volt)}V · ${Math.round(s.cur)}A`;
+  // Modules
+  s.mTs.forEach((t2,i)=>{const c=hc(t2),p=cl2(t2/75,0,1);
+    const f=document.getElementById(`mf${i}`);f.style.width=(p*100)+'%';f.style.background=c;f.style.boxShadow=`0 0 6px ${c}40`;
+    const v=document.getElementById(`mv${i}`);v.textContent=t2.toFixed(1)+'°';v.style.color=c;
+    document.getElementById(`cz${i}`).setAttribute('fill',`hsla(${lerp(185,0,p)},80%,55%,0.12)`);document.getElementById(`cz${i}`).setAttribute('stroke',c);
+    document.getElementById(`ct${i}`).textContent=t2.toFixed(1)+'°';document.getElementById(`ct${i}`).setAttribute('fill',c);
+  });
+  // Tire pressure
+  s.tP.forEach((v,i)=>{
+    const c=v<1.7||v>2.1?'#ff3d3d':v<1.75||v>2.0?'#ff8c00':'#00e5a0';
+    document.getElementById(`tpv${i}`).textContent=v.toFixed(2);document.getElementById(`tpv${i}`).style.color=c;
+    const p=cl2((v-1.5)/0.8,0,1);const f=document.getElementById(`tpf${i}`);f.style.width=(p*100)+'%';f.style.background=c;
+  });
+  // Vbars
+  const mc=s.mT>80?'#ff3d3d':s.mT>60?'#ff8c00':'#00e8ff';
+  uVB('vm',s.mT,120,mc);uVB('vp',s.pow,45,'#a78bfa');
+  // Sparks
+  uSp('es',s.eH);uSp('ps',s.pH);uSp('ts',s.tH);uSp('cfs',s.cH);
+  document.getElementById('ev').textContent=s.ene.toFixed(1);document.getElementById('pv').textContent=s.pow.toFixed(1);
+  document.getElementById('tv').textContent=Math.round(s.tor);document.getElementById('cfv').textContent=s.cool.toFixed(1);
+  // G
+  document.getElementById('gd').setAttribute('cx',50+cl2(s.gx,-2.5,2.5)/2.5*38);document.getElementById('gd').setAttribute('cy',50-cl2(s.gy,-2.5,2.5)/2.5*38);
+  // Stats
+  document.getElementById('xv').textContent=Math.round(s.volt);document.getElementById('xc').textContent=Math.round(s.cur);
+  document.getElementById('xq').textContent=Math.round(s.tor);document.getElementById('xt').textContent=Math.round(cl2(s.speed/240*100,0,100));
+  document.getElementById('xb').textContent=(s.speed<60?(Math.random()*40+20):Math.random()*5).toFixed(0);
+  document.getElementById('xa').textContent=(lerp(42,68,cl2(s.speed/200,0,1))+(Math.random()-0.5)*3).toFixed(1);
+}
+
+function uVB(id,val,mx,c){const p=cl2(val/mx,0,1),f=document.getElementById(id+'f');f.style.height=(p*100)+'%';f.style.background=`linear-gradient(to top,${c},${c}bb)`;f.style.boxShadow=`0 0 10px ${c}40`;const v=document.getElementById(id+'v');v.textContent=val<100?val.toFixed(1):Math.round(val);v.style.color=c}
+function uSp(id,data){const w=300,h=55,mx=Math.max(...data.map(Math.abs),1);const pts=data.map((v,i)=>({x:(i/(data.length-1))*w,y:h/2-(v/mx)*(h/2)*0.85}));const ld=pts.map((p,i)=>`${i===0?'M':'L'} ${p.x} ${p.y}`).join(' ');document.getElementById(id+'l').setAttribute('d',ld);document.getElementById(id+'a').setAttribute('d',`${ld} L ${w} ${h} L 0 ${h} Z`);const l=pts[pts.length-1];if(l){document.getElementById(id+'d').setAttribute('cx',l.x);document.getElementById(id+'d').setAttribute('cy',l.y)}}
+
+init();setInterval(tick,400);tick();
+</script>
+</body>
+</html>
